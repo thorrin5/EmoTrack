@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detekcia Emócií z Textu</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+    
+        :root {
+            --background-color: #212121;
+            --text-color: white;
+        }
+    
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            transition: background-color 1s ease, color 1s ease;
+        }
+    
+        .form-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .button-wrapper {
+            display: flex;
+            gap: 50px;
+            margin-top: 10px;
+        }
+    
+        h1 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+    
+        .box-input {
+            position: relative;
+            margin: 0 auto 20px;
+        }
+
+        .placeholder-text {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            color: gray;
+            font-size: 1.1em;
+            pointer-events: none;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .placeholder-text.hidden {
+            animation: flyUp 0.5s forwards;
+        }
+
+        @keyframes flyUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        .border {
+            background-image: linear-gradient(to right bottom, #e300ff, #ff00aa, #ff5956, #ffb900, #fffe00);
+            box-shadow: -25px -10px 30px -5px rgba(225, 0, 255, 0.5),
+                        25px -10px 30px -5px rgba(255, 0, 212, 0.5),
+                        25px 10px 30px -5px rgba(255, 174, 0, 0.5),
+                        -25px 10px 30px -5px rgba(255, 230, 0, 0.5);
+            padding: 4px;
+            display: inline-block;
+        }
+    
+        .input {
+            background-color: var(--background-color);
+            width: 100%;
+            min-width: 300px;
+            max-width: 100px;
+            height: auto;
+            max-height: 150px;
+            resize: vertical;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 1.1em;
+            font-family: 'Poppins', Arial, sans-serif;
+            border: none;
+            color: var(--text-color);
+            outline: 0;
+            transition: background-color 1s ease, color 1s ease;
+        }
+
+        .input::-webkit-scrollbar {
+            width: 8px;
+        }
+    
+        .input::-webkit-scrollbar-track {
+            background: #ff00aa;
+        }
+    
+        .input::-webkit-scrollbar-thumb {
+            background: #000000;
+            cursor: default;
+        }
+    
+        .input::-webkit-scrollbar-thumb:hover {
+            background: #ffffff;
+            cursor: grab;
+        }
+    
+        .input::-webkit-scrollbar-thumb:active {
+            background: #ffffff;
+            cursor: grabbing;
+        }
+    
+        button {
+            background-color: #ff00aa;
+            color: var(--text-color);
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-family: 'Poppins', Arial, sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: transform 0.3s ease, background-color 0.3s ease, border-radius 0.3s ease;
+        }
+
+        button#predict-btn:hover {
+            background-color: #e300ff;
+            transform: scale(1.05) rotate(2deg);
+            border-radius: 0;
+        }
+
+        button#reset-btn:hover {
+            background-color: #e300ff;
+            transform: scale(1.05) rotate(-2deg);
+            border-radius: 0;
+        }
+        
+        .ui-switch {
+            --switch-bg: rgb(135, 150, 165);
+            --switch-width: 48px;
+            --switch-height: 20px;
+            --circle-diameter: 32px;
+            --circle-bg: rgb(0, 56, 146);
+            --circle-inset: calc((var(--circle-diameter) - var(--switch-height)) / 2);
+        }
+    
+        .ui-switch input {
+            display: none;
+        }
+    
+        .slider {
+            width: var(--switch-width);
+            height: var(--switch-height);
+            background: var(--switch-bg);
+            border-radius: 999px;
+            position: relative;
+            cursor: pointer;
+        }
+    
+        .slider .circle {
+            top: calc(var(--circle-inset) * -1);
+            left: 0;
+            width: var(--circle-diameter);
+            height: var(--circle-diameter);
+            position: absolute;
+            background: var(--circle-bg);
+            border-radius: inherit;
+            transition: left 0.3s ease-in-out;
+            /* dôležité: musíš povoliť pre ::before "position: absolute" cez position: relative
+            alebo absolute; rovnako text, aby sa zobrazil na "vrchu" */
+            overflow: hidden; 
+        }
+
+        .slider .circle::before {
+            /* ikonka Mesiaca ako default (noc / OFF) */
+            content: "";
+            position: absolute;
+            top: 0; 
+            right: 0; 
+            bottom: 0; 
+            left: 0;
+            background: url("https://static-00.iconduck.com/assets.00/moon-icon-249x256-vubh0da1.png") no-repeat center;
+            background-size: 55% 55%;
+            transition: 0.3s ease-in-out;
+            /* menšie zmenšenie, aby ikonka nevyčnievala */
+            transform: scale(0.8);
+            margin: auto;
+            pointer-events: none; /* nech sa kurzor "netýka" ikonky */
+        }
+
+        .ui-switch input:checked + .slider .circle::before {
+            /* ikonka Slnka, keď je prepínač zapnutý (deň / ON) */
+            background-image: url('weather.png');
+        }
+
+        .ui-switch input:checked + .slider .circle {
+            left: calc(100% - var(--circle-diameter));
+        }
+    
+        @keyframes flyIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    
+        #emotion-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5%;
+        }
+
+        @keyframes wave {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .wave span {
+            display: inline-block;
+            animation: wave 1.2s ease-in-out;
+            animation-delay: calc(var(--wave-index) * 0.2s);
+            animation-fill-mode: forwards;
+            animation-iteration-count: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-wrapper">
+        <label class="ui-switch">
+            <input type="checkbox" id="mode-switch">
+            <div class="slider">
+                <div class="circle"></div>
+            </div>
+        </label>
+        <h1>Detekcia emócií z textu</h1>
+        <div class="box-input">
+            <div class="border">
+                <label id="placeholder" class="placeholder-text"></label>
+                <textarea 
+                    id="input-text" 
+                    class="input" 
+                    rows="8"
+                ></textarea>
+            </div>
+        </div>        
+        <div class="button-wrapper">
+            <button id="reset-btn">Reset</button>
+            <button id="predict-btn">Predikovať emóciu</button>
+        </div>
+        <span id="loading" style="display: none;"></span>
+
+        <div id="emotion-wrapper" style="display: none; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px;">
+            <div id="emotion-result" style="font-size: 1.5em; text-align: center;"></div>
+            <div id="emoji" style="font-size: 2em;"></div>
+        </div>
+        
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        const predictBtn = document.getElementById('predict-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const loading = document.getElementById('loading');
+        const emotionWrapper = document.getElementById('emotion-wrapper');
+        const emotionResult = document.getElementById('emotion-result');
+        const emoji = document.getElementById('emoji');
+        const modeSwitch = document.getElementById('mode-switch');
+        const inputText = document.getElementById('input-text');
+        const placeholder = document.getElementById('placeholder');
+        
+        let isProgrammaticUpdate = false;
+
+        // Tlačidlo "robot" pre náhodný text
+        const emojiButton = document.createElement('div');
+        emojiButton.id = 'emoji-button';
+        emojiButton.innerHTML = '🤖';
+        emojiButton.style.position = 'absolute';
+        emojiButton.style.top = '-20px';
+        emojiButton.style.right = '-20px';
+        emojiButton.style.width = '50px';
+        emojiButton.style.height = '50px';
+        emojiButton.style.borderRadius = '50%';
+        emojiButton.style.display = 'none';
+        emojiButton.style.alignItems = 'center';
+        emojiButton.style.justifyContent = 'center';
+        emojiButton.style.backgroundColor = '#ff00aa';
+        emojiButton.style.color = 'white';
+        emojiButton.style.fontSize = '1.5em';
+        emojiButton.style.cursor = 'pointer';
+        emojiButton.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.2)';
+        emojiButton.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        emojiButton.style.opacity = '0';
+        emojiButton.style.transform = 'scale(0.8)';
+        document.querySelector('.box-input').appendChild(emojiButton);
+
+        // Zobraz emoji-button, keď textarea je "focus"
+        inputText.addEventListener('focus', () => {
+            if (!isProgrammaticUpdate) {
+                placeholder.classList.add('hidden');
+            }
+            emojiButton.style.display = 'flex';
+            setTimeout(() => {
+                emojiButton.style.opacity = '1';
+                emojiButton.style.transform = 'scale(1)';
+            }, 10);
+        });
+    
+        // Skry emoji-button, keď textarea "blur" a prázdna
+        inputText.addEventListener('blur', () => {
+            if (!isProgrammaticUpdate && !inputText.value.trim()) {
+                placeholder.classList.remove('hidden');
+            }
+            setTimeout(() => {
+                emojiButton.style.opacity = '0';
+                emojiButton.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    emojiButton.style.display = 'none';
+                }, 500);
+            }, 200);
+        });
+    
+        // Po kliknutí na "robot" - fetch random text
+        emojiButton.addEventListener('click', () => {
+            fetch('http://127.0.0.1:5000/get_random_sentence')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sentence) {
+                        inputText.value = data.sentence;
+                        placeholder.classList.add('hidden');
+                    } else {
+                        alert("Failed to load a sentence. Please try again.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching random sentence:", error);
+                    alert("Error fetching random sentence. Ensure the backend is running and the file exists.");
+                });
+        });
+    
+        // Light/dark mód
+        modeSwitch.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                document.documentElement.style.setProperty('--background-color', 'white');
+                document.documentElement.style.setProperty('--text-color', 'black');
+            } else {
+                document.documentElement.style.setProperty('--background-color', '#212121');
+                document.documentElement.style.setProperty('--text-color', 'white');
+            }
+        });
+    
+        // Reset
+        resetBtn.addEventListener('click', () => {
+            inputText.value = '';
+            placeholder.classList.remove('hidden');
+            emotionWrapper.style.display = 'none';
+            emotionResult.textContent = '';
+            emoji.textContent = '';
+            predictBtn.style.display = 'inline-block';
+        });
+
+        // Funkcia pre 6 tried: sadness, joy, love, anger, fear, surprise
+        // A s mapou emoji pre intensitu len pre sadness/joy/anger/fear
+        // love => srdiečko, surprise => darček
+        function getIntensityEmoji(emotion, intensity) {
+            const emojis = {
+                sadness: ["😞","🥲","😓","😭"],
+                joy:     ["😊","😁","😃","🤩"],
+                anger:   ["🥴","😠","😡","🤬"],
+                fear:    ["🫢","😨","😱","😵"],
+                love:    ["❤️","❤️","❤️","❤️"],
+                surprise:["🎁","🎁","🎁","🎁"]
+            };
+
+            const arr = emojis[emotion.toLowerCase()] || ["❓","❓","❓","❓"];
+            if (intensity < 0 || intensity > 3) {
+                return arr[0];
+            }
+            return arr[intensity];
+        }
+
+        // Funkcia, ktorá prevedie číselnú intenzitu (0..3) na slovnú
+        function intensityToString(intensity) {
+            switch (intensity) {
+                case 0: return "none";
+                case 1: return "low";
+                case 2: return "medium";
+                case 3: return "high";
+                default: return "";
+            }
+        }
+    
+        predictBtn.addEventListener('click', () => {
+            const text = inputText.value.trim();
+            if (!text) {
+                emotionResult.textContent = "Prosím, zadajte text.";
+                emotionWrapper.style.display = "none";
+                return;
+            }
+
+            loading.style.display = "inline";
+            emotionWrapper.style.display = "none";
+
+            fetch('http://localhost:5000/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = "none";
+                if (data.error) {
+                    emotionResult.textContent = `Chyba: ${data.error}`;
+                } else {
+                    const rawEmotion = data.emotion.toLowerCase();
+                    const emotion = rawEmotion.charAt(0).toUpperCase() + rawEmotion.slice(1);
+                    const intensity = data.intensity; // 0..3
+
+                    // Získame emoji
+                    const intensityEmoji = getIntensityEmoji(rawEmotion, intensity);
+
+                    // (1) Vlnivý text pre emotion
+                    const emotionHTML = emotion.split("").map((char, index) => 
+                        `<span style="--wave-index: ${index}">${char}</span>`
+                    ).join("");
+
+                    // (2) Pokiaľ je to love alebo surprise, neukazujeme intenzitu
+                    let emojiHTML = "";
+                    if (rawEmotion === "love" || rawEmotion === "surprise") {
+                        // Iba emoji bez čísla/intenzity
+                        emojiHTML = `<span style="--wave-index: ${emotion.length}">${intensityEmoji}</span>`;
+                    } else {
+                        // Prevedieme číselnú intenzitu na slovnú (0 => none, 1 => low ...)
+                        const intensityString = intensityToString(intensity);
+                        const intensityStr = `(${intensityString})`;
+                        emojiHTML = `<span style="--wave-index: ${emotion.length}">${intensityEmoji} ${intensityStr}</span>`;
+                    }
+
+                    // Výsledné zobrazenie: napr. "Anger 🤬 (medium)"
+                    emoji.innerHTML = emotionHTML + " " + emojiHTML;
+                    
+                    emotionWrapper.style.display = "flex";
+                    emotionWrapper.style.animation = "flyIn 0.5s ease-out forwards";
+                    predictBtn.style.display = 'none';
+
+                    setTimeout(() => { emoji.classList.add('wave'); }, 500);
+                    setTimeout(() => { emoji.classList.remove('wave'); }, 3000);
+
+                    setTimeout(() => {
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 1.2 },
+                        });
+                    }, 500);
+                }
+            })
+            .catch(error => {
+                loading.style.display = "none";
+                emotionResult.textContent = `Chyba: ${error.message}`;
+                emotionWrapper.style.display = "none";
+            });
+        });
+    </script>
+</body>
+</html>
