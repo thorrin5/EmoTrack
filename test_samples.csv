@@ -1,0 +1,5 @@
+ID,Tweet,Affect Dimension,Clean_Tweet
+test-001,"I'm so happy today!",joy,"i'm so happy today!"
+test-002,"This is terrible news.",sadness,"this is terrible news."
+test-003,"I'm furious with these delays!",anger,"i'm furious with these delays!"
+test-004,"Feeling slightly worried about tomorrow.",fear,"feeling slightly worried about tomorrow."
